@@ -1,7 +1,5 @@
 import cv2
-from ultralytics import YOLO
-
-model = YOLO("weights/best.pt")
+from app.services.yolo_service import model
 
 # ✅ Solution 1 & 2: Resize frames + Skip frames
 def process_video(input_path, output_path, frame_skip=3, target_width=640, target_height=480, progress_callback=None):

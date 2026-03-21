@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 
 function VideoUpload() {
@@ -11,7 +11,6 @@ function VideoUpload() {
   const [totalPotholes, setTotalPotholes] = useState(null);
   const [liveCount, setLiveCount] = useState(0);
   const [streamUrl, setStreamUrl] = useState(null);
-  const [videoFilename, setVideoFilename] = useState(null);
 
   const pollJobStatus = async (id) => {
     try {
@@ -22,15 +21,12 @@ function VideoUpload() {
       setStatus(jobStatus);
       setProgress(currentProgress);
 
-      // Live update of pothole count
       if (res.data.total_potholes !== undefined) {
         setLiveCount(res.data.total_potholes);
       }
 
       if (jobStatus === "completed") {
-        const videoPath = `http://localhost:8000${res.data.output_video}`;
-        console.log("Video URL:", videoPath);
-        setResult(videoPath);
+        setResult(`http://localhost:8000${res.data.output_video}`);
         setTotalPotholes(res.data.total_potholes || 0);
         setLiveCount(res.data.total_potholes || 0);
         setProcessing(false);
@@ -38,7 +34,6 @@ function VideoUpload() {
         setStatus(`Failed: ${res.data.error}`);
         setProcessing(false);
       } else if (jobStatus === "processing" || jobStatus === "queued") {
-        // Poll more frequently for live updates
         setTimeout(() => pollJobStatus(id), 1000);
       }
     } catch (error) {
@@ -54,7 +49,7 @@ function VideoUpload() {
 
     setVideo(URL.createObjectURL(file));
     setProcessing(true);
-    setStatus("📤 Uploading file...");
+    setStatus("Uploading...");
     setProgress(5);
     setTotalPotholes(null);
     setLiveCount(0);
@@ -72,20 +67,12 @@ function VideoUpload() {
 
       const id = res.data.job_id;
       setJobId(id);
-      
-      // Construct stream URL - stream expects the uploaded filename
-      const streamUri = `http://localhost:8000/stream/${file.name}`;
-      setStreamUrl(streamUri);
-      setVideoFilename(file.name);
-      
-      setStatus("🔄 Processing video... (Live Stream Starting)");
-      setProgress(15);
-
-      // Start polling for live updates
+      setStreamUrl(`http://localhost:8000/stream/${file.name}`);
+      setStatus("Processing...");
       pollJobStatus(id);
     } catch (error) {
       console.error("Upload error:", error);
-      setStatus("❌ Upload failed");
+      setStatus("Upload failed");
       setProcessing(false);
     }
   };
@@ -93,26 +80,27 @@ function VideoUpload() {
   const getStatusIcon = () => {
     if (status.includes("Upload")) return "📤";
     if (status.includes("Process")) return "🔄";
-    if (status.includes("Detect")) return "🔍";
     return "⏳";
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-      <h1 style={{ textAlign: "center", color: "#222", marginBottom: "30px" }}>🎥 Video Pothole Detection</h1>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px", width: "100%" }}>
+      <div style={{ textAlign: "center" }}>
+        <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Pothole Detection</h2>
+        <p style={{ color: "var(--text-dim)" }}>Upload an video  of a road to detect potholes using AI.</p>
+      </div>
 
       {/* Upload Button */}
-      <div style={{ marginBottom: "20px", textAlign: "center" }}>
-        <label style={{ 
-          display: "inline-block",
-          padding: "12px 30px",
-          backgroundColor: processing ? "#ccc" : "#FF6B6B",
-          color: "white",
-          borderRadius: "8px",
+      <div style={{ textAlign: "center" }}>
+        <label className="btn-primary" style={{ 
+          display: "inline-flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          gap: "10px", 
+          minWidth: "240px",
           cursor: processing ? "not-allowed" : "pointer",
-          fontWeight: "bold",
-          fontSize: "16px",
-          transition: "all 0.3s ease"
+          fontSize: "1.1rem",
+          fontWeight: 700
         }}>
           <input 
             type="file" 
@@ -121,225 +109,136 @@ function VideoUpload() {
             disabled={processing}
             style={{ display: "none" }}
           />
-          {processing ? "⏳ Processing..." : "📂 Choose Video File"}
+          {processing ? "⏳ Processing..." : "🎥 Upload Video"}
         </label>
       </div>
 
-      {/* Live Status Display */}
+      {/* Processing Dashboard */}
       {processing && (
-        <div style={{
-          backgroundColor: "white",
-          border: "3px solid #FF6B6B",
-          borderRadius: "10px",
-          padding: "20px",
-          marginBottom: "20px",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
-        }}>
-          {/* Status with Icon */}
-          <div style={{ 
-            fontSize: "20px", 
-            fontWeight: "bold", 
-            marginBottom: "15px",
-            color: "#FF6B6B"
-          }}>
-            {getStatusIcon()} {status}
+        <div className="card" style={{ padding: "24px", borderLeft: "4px solid var(--primary)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "1.2rem" }}>{getStatusIcon()}</span>
+              <span style={{ fontWeight: "600", color: "var(--text-heading)" }}>{status}</span>
+            </div>
+            <span style={{ color: "var(--primary)", fontWeight: "700" }}>{progress}%</span>
           </div>
 
-          {/* Progress Bar */}
-          <div style={{
-            width: "100%",
-            backgroundColor: "#E0E0E0",
-            borderRadius: "10px",
-            overflow: "hidden",
-            height: "40px",
-            marginBottom: "20px"
-          }}>
-            <div style={{
-              width: `${progress}%`,
-              backgroundColor: "#FF6B6B",
-              height: "100%",
-              transition: "width 0.3s ease",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontWeight: "bold",
-              fontSize: "14px"
-            }}>
-              {progress}%
-            </div>
+          <div style={{ height: "8px", backgroundColor: "var(--bg-accent)", borderRadius: "4px", overflow: "hidden", marginBottom: "20px" }}>
+            <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(to right, var(--primary), var(--secondary))", transition: "width 0.4s ease" }} />
           </div>
 
-          {/* Live Statistics */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "15px"
-          }}>
-            <div style={{
-              backgroundColor: "#FFE5E5",
-              padding: "15px",
-              borderRadius: "8px",
-              textAlign: "center",
-              border: "2px solid #FF6B6B"
-            }}>
-              <div style={{ fontSize: "12px", color: "#666", marginBottom: "5px" }}>🔍 Live Detections</div>
-              <div style={{ fontSize: "32px", fontWeight: "bold", color: "#FF6B6B" }}>
-                {liveCount}
-              </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div style={{ backgroundColor: "var(--bg-accent)", padding: "12px", borderRadius: "var(--radius-sm)", textAlign: "center" }}>
+              <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Live Detections</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "var(--primary)" }}>{liveCount}</div>
             </div>
-
-            {jobId && (
-              <div style={{
-                backgroundColor: "#f0f0f0",
-                padding: "15px",
-                borderRadius: "8px",
-                textAlign: "center",
-                border: "2px solid #ddd"
-              }}>
-                <div style={{ fontSize: "12px", color: "#666", marginBottom: "5px" }}>📋 Job ID</div>
-                <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333", wordBreak: "break-all" }}>
-                  {jobId.substring(0, 12)}...
-                </div>
-              </div>
-            )}
+            <div style={{ backgroundColor: "var(--bg-accent)", padding: "12px", borderRadius: "var(--radius-sm)", textAlign: "center" }}>
+              <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", textTransform: "uppercase" }}>Job ID</div>
+              <div style={{ fontSize: "0.8rem", fontWeight: "500", marginTop: "8px" }}>{jobId ? jobId.substring(0, 8) : "---"}</div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Video Display */}
+      {/* Videos Layout */}
       <div style={{ 
-        marginTop: "20px", 
-        display: "grid",
-        gridTemplateColumns: (video && result) || (video && streamUrl) ? "1fr 1fr" : "1fr",
-        gap: "20px",
-        justifyItems: "center"
+        display: "grid", 
+        gridTemplateColumns: (video && (result || streamUrl)) ? "repeat(auto-fit, minmax(400px, 1fr))" : "1fr",
+        gap: "32px",
+        marginTop: "16px"
       }}>
         {video && (
-          <div style={{ 
-            backgroundColor: "white",
-            border: "2px solid #ddd",
-            borderRadius: "10px",
-            padding: "15px",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "500px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+          <div className="card" style={{ 
+            padding: "20px", 
+            display: "flex", 
+            flexDirection: "column",
+            height: "100%",
+            boxSizing: "border-box"
           }}>
-            <h3 style={{ marginTop: "0", color: "#333" }}>📹 Original Video</h3>
-            <video 
-              src={video} 
-              controls 
-              width="100%" 
-              style={{ 
-                borderRadius: "5px",
-                backgroundColor: "#000",
-                maxHeight: "400px"
-              }} 
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "var(--text-dim)" }}></div>
+              <h3 style={{ fontSize: "0.9rem", color: "var(--text)", textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>Original Input</h3>
+            </div>
+            
+            <div style={{ 
+              borderRadius: "var(--radius-sm)", 
+              overflow: "hidden", 
+              backgroundColor: "#000", 
+              aspectRatio: "16/9", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              border: "1px solid var(--bg-accent)",
+              flex: 1
+            }}>
+              <video src={video} controls width="100%" style={{ height: "100%", objectFit: "contain" }} />
+            </div>
           </div>
         )}
 
-        {(result || processing) && (
-          <div style={{ 
-            backgroundColor: result ? "white" : "#f9f9f9",
-            border: result ? "2px solid #4CAF50" : "2px dashed #ccc",
-            borderRadius: "10px",
-            padding: "15px",
-            textAlign: "center",
-            width: "100%",
-            maxWidth: "500px",
-            boxShadow: result ? "0 4px 6px rgba(0,0,0,0.1)" : "none",
-            minHeight: "450px",
-            display: "flex",
+        {(result || streamUrl) && (
+          <div className="card" style={{ 
+            padding: "20px", 
+            display: "flex", 
             flexDirection: "column",
-            justifyContent: "center"
+            height: "100%",
+            boxSizing: "border-box",
+            borderColor: result ? "var(--primary)" : "var(--secondary)",
+            borderTop: result ? "6px solid var(--primary)" : "6px solid var(--secondary)"
           }}>
-            <h3 style={{ marginTop: "0", color: result ? "#4CAF50" : (streamUrl ? "#2196F3" : "#999") }}>
-              {result ? "✅ Processed Video" : (streamUrl ? "🔴 Live Stream" : "⏳ Processing...")}
-            </h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ 
+                width: "8px", 
+                height: "8px", 
+                borderRadius: "50%", 
+                backgroundColor: result ? "var(--primary)" : "#ef4444",
+                boxShadow: result ? "none" : "0 0 10px #ef4444"
+              }}></div>
+              <h3 style={{ fontSize: "0.9rem", color: result ? "var(--primary)" : "var(--secondary)", textTransform: "uppercase", letterSpacing: "1px", margin: 0 }}>
+                {result ? "Detection Completed" : "Live Detection Stream"}
+              </h3>
+            </div>
             
-            {result ? (
-              <>
-                <video 
-                  controls 
-                  width="100%" 
-                  style={{ 
-                    borderRadius: "5px",
-                    backgroundColor: "#000",
-                    maxHeight: "400px"
-                  }} 
-                >
+            <div style={{ 
+              borderRadius: "var(--radius-sm)", 
+              overflow: "hidden", 
+              backgroundColor: "#000", 
+              aspectRatio: "16/9", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              border: "1px solid var(--bg-accent)",
+              flex: 1
+            }}>
+              {result ? (
+                <video controls width="100%" style={{ height: "100%", objectFit: "contain" }}>
                   <source src={result} type="video/mp4" />
-                  Your browser does not support the video tag.
                 </video>
-                
-                {/* Final Detection Card */}
-                {totalPotholes !== null && (
-                  <div style={{
-                    marginTop: "15px",
-                    padding: "15px",
-                    backgroundColor: "#FFE5E5",
-                    borderRadius: "8px",
-                    border: "2px solid #FF6B6B"
-                  }}>
-                    <h4 style={{ margin: "0 0 10px 0", color: "#C92A2A" }}>
-                      🎯 Detection Results
-                    </h4>
-                    <p style={{ 
-                      margin: "0", 
-                      fontSize: "28px", 
-                      fontWeight: "bold", 
-                      color: "#FF6B6B" 
-                    }}>
-                      Total Potholes: <span>{totalPotholes}</span>
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {streamUrl ? (
-                  <>
-                    <img 
-                      src={streamUrl} 
-                      alt="Live stream detection" 
-                      style={{
-                        borderRadius: "5px",
-                        backgroundColor: "#000",
-                        maxHeight: "380px",
-                        width: "100%",
-                        objectFit: "contain"
-                      }}
-                    />
-                    <p style={{ color: "#666", fontSize: "12px", margin: "10px 0 0 0" }}>
-                      🔴 Live detection stream running...
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div style={{
-                      fontSize: "48px",
-                      animation: "spin 2s linear infinite"
-                    }}>⏳</div>
-                    <p style={{ color: "#999", fontSize: "14px", margin: "10px 0 0 0" }}>
-                      Processing in background...
-                    </p>
-                  </>
-                )}
-              </>
+              ) : (
+                <img src={streamUrl} alt="Live stream" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+              )}
+            </div>
+
+            {/* Stats Card inside the result card for better grouping */}
+            {totalPotholes !== null && (
+              <div style={{
+                marginTop: "20px",
+                padding: "20px",
+                backgroundColor: "rgba(245, 158, 11, 0.05)",
+                borderRadius: "var(--radius-sm)",
+                textAlign: "center",
+                border: "1px solid var(--border-strong)"
+              }}>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "2px", fontWeight: "700", marginBottom: "4px" }}>Total Hazards Detected</div>
+                <div style={{ fontSize: "3rem", fontWeight: "900", color: "var(--primary)", lineHeight: "1" }}>
+                  {totalPotholes}
+                </div>
+              </div>
             )}
           </div>
         )}
       </div>
-
-      {/* Add animation for spinner */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

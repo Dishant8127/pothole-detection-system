@@ -4,10 +4,10 @@ import shutil
 import os
 import uuid
 import cv2
-from app.services.yolo_service import detect_potholes
+import time
+from app.services.yolo_service import detect_potholes, model
 from app.utils.image_utils import draw_boxes
 from app.utils.video_utils import process_video
-from ultralytics import YOLO
 
 router = APIRouter()
 
@@ -142,7 +142,6 @@ def generate_video_stream(video_path: str):
     Generator function that streams video frames with real-time detection
     Yields JPEG frames in MJPEG format for browser compatibility
     """
-    model = YOLO("weights/best.pt")
     cap = cv2.VideoCapture(video_path)
     
     if not cap.isOpened():
@@ -150,6 +149,7 @@ def generate_video_stream(video_path: str):
     
     # Get video properties
     fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0: fps = 30
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     
@@ -161,32 +161,27 @@ def generate_video_stream(video_path: str):
     frame_count = 0
     try:
         while True:
+            start_time = time.time()
             success, frame = cap.read()
             if not success:
                 break
             
-            # Skip frames for performance (every 3rd frame)
+            # Skip frames for performance (every 2nd frame is enough for "live" feel)
             frame_count += 1
-            if frame_count % 3 != 0:
+            if frame_count % 2 != 0:
                 continue
             
             # Resize frame for faster YOLO inference
             frame_resized = cv2.resize(frame, (target_width, target_height))
             
-            # Run YOLO detection
-            results = model(frame_resized, verbose=False)
+            # Run YOLO detection using the CENTRALIZED model
+            results = model(frame_resized, verbose=False, stream=False)
             
             # Draw bounding boxes
             for r in results:
                 if r.boxes:
                     for box in r.boxes:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
-                        
-                        # Scale coordinates back to original size
-                        x1 = int(x1 / scale_x)
-                        y1 = int(y1 / scale_y)
-                        x2 = int(x2 / scale_x)
-                        y2 = int(y2 / scale_y)
                         
                         # Draw rectangle on resized frame
                         cv2.rectangle(frame_resized, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -202,6 +197,12 @@ def generate_video_stream(video_path: str):
                    b'Content-Type: image/jpeg\r\n'
                    b'Content-Length: ' + str(len(frame_bytes)).encode() + b'\r\n\r\n'
                    + frame_bytes + b'\r\n')
+            
+            # Small pacing sleep to prevent overwhelming the stream if processing is too fast
+            elapsed = time.time() - start_time
+            sleep_time = max(0.0, (1.0 / (fps / 2)) - elapsed)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
     
     finally:
         cap.release()
