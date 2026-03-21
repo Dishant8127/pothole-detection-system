@@ -97,7 +97,7 @@ function VideoUpload() {
           alignItems: "center", 
           justifyContent: "center",
           gap: "10px", 
-          minWidth: "240px",
+          minWidth: "130px",
           cursor: processing ? "not-allowed" : "pointer",
           fontSize: "1.1rem",
           fontWeight: 700
