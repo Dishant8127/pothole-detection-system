@@ -36,7 +36,7 @@ function Home() {
         </p>
       </header>
 
-      <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "40px 20px" }}>
+      <main style={{ maxWidth: "100%", margin: "0 auto", padding: "40px 20px" }}>
         <div style={{ 
           display: "flex", 
           justifyContent: "center", 
