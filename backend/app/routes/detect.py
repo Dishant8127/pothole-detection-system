@@ -26,8 +26,12 @@ job_status = {}
 
 @router.post("/detect")
 async def detect(file: UploadFile = File(...)):
+    # Standardize output to JPG for maximum compatibility
+    base_filename = os.path.splitext(file.filename)[0]
+    output_filename = f"output_{base_filename}.jpg"
+    
     file_path = f"{UPLOAD_DIR}/{file.filename}"
-    output_path = f"{OUTPUT_DIR}/output_{file.filename}"
+    output_path = f"{OUTPUT_DIR}/{output_filename}"
 
     # Save uploaded file
     with open(file_path, "wb") as buffer:
@@ -36,7 +40,7 @@ async def detect(file: UploadFile = File(...)):
     # Run detection
     results = detect_potholes(file_path)
 
-    # Draw bounding boxes
+    # Draw bounding boxes (now saves as JPG internally)
     draw_boxes(results, file_path, output_path)
     
     # ✅ Count total potholes
@@ -45,11 +49,9 @@ async def detect(file: UploadFile = File(...)):
         total_potholes += len(r.boxes) if r.boxes else 0
 
     # Return relative path (without 'outputs/')
-    serve_path = f"output_{file.filename}"
-
     return {
         "message": "Detection complete",
-        "output_image": serve_path,
+        "output_image": output_filename,
         "total_potholes": total_potholes
     }
 
@@ -182,11 +184,14 @@ def generate_video_stream(video_path: str):
                 if r.boxes:
                     for box in r.boxes:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
+                        conf = float(box.conf[0])
                         
                         # Draw rectangle on resized frame
+                        # Use Green (0, 255, 0) and same label format
                         cv2.rectangle(frame_resized, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        cv2.putText(frame_resized, "Pothole", (x1, y1 - 10), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        cv2.putText(frame_resized, f"Pothole {conf:.2f}", 
+                                    (x1, y1-10), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             
             # Encode frame to JPEG
             ret, buffer = cv2.imencode('.jpg', frame_resized, [cv2.IMWRITE_JPEG_QUALITY, 80])
