@@ -16,9 +16,7 @@ app.add_middleware(
 
 app.include_router(router)
 
-# Create output directories if they don't exist
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("outputs/videos", exist_ok=True)
 
-# Serve output images and videos
 app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
