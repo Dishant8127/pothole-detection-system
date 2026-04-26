@@ -16,6 +16,10 @@ app.add_middleware(
 
 app.include_router(router)
 
+@app.get("/")
+async def root():
+    return {"message": "backend is running"}
+
 os.makedirs("outputs", exist_ok=True)
 os.makedirs("outputs/videos", exist_ok=True)
 
