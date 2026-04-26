@@ -14,7 +14,7 @@ function VideoUpload() {
 
   const pollJobStatus = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:8000/detect-video/status/${id}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/detect-video/status/${id}`);
       const jobStatus = res.data.status;
       const currentProgress = res.data.progress || 0;
 
@@ -26,7 +26,7 @@ function VideoUpload() {
       }
 
       if (jobStatus === "completed") {
-        setResult(`http://localhost:8000${res.data.output_video}`);
+        setResult(`${import.meta.env.VITE_API_BASE_URL}${res.data.output_video}`);
         setTotalPotholes(res.data.total_potholes || 0);
         setLiveCount(res.data.total_potholes || 0);
         setProcessing(false);
@@ -61,13 +61,13 @@ function VideoUpload() {
 
     try {
       const res = await axios.post(
-        "http://localhost:8000/detect-video",
+        `${import.meta.env.VITE_API_BASE_URL}/detect-video`,
         formData
       );
 
       const id = res.data.job_id;
       setJobId(id);
-      setStreamUrl(`http://localhost:8000/stream/${file.name}`);
+      setStreamUrl(`${import.meta.env.VITE_API_BASE_URL}/stream/${file.name}`);
       setStatus("Processing...");
       pollJobStatus(id);
     } catch (error) {

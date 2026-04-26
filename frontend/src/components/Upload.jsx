@@ -21,15 +21,15 @@ function Upload() {
 
     try {
       const res = await axios.post(
-        "http://localhost:8000/detect",
+        `${import.meta.env.VITE_API_BASE_URL}/detect`,
         formData
       );
 
-      setResult(`http://localhost:8000/outputs/${res.data.output_image}`);
+      setResult(`${import.meta.env.VITE_API_BASE_URL}/outputs/${res.data.output_image}`);
       setTotalPotholes(res.data.total_potholes || 0);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Error detecting potholes. Please try again.");
+      alert("Error detecyting potholes. Please try again.");
     } finally {
       setIsUploading(false);
     }
